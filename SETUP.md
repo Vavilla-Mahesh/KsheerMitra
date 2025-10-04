@@ -97,7 +97,7 @@ Login with admin credentials:
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@kshirmitra.com",
+    "email": "admin@shirmitra.com",
     "password": "AdminPass123"
   }'
 ```
@@ -145,12 +145,12 @@ flutter run -d <device-id>
 After setup, you can login with these accounts:
 
 ### Admin Account
-- Email: `admin@kshirmitra.com`
+- Email: `admin@shirmitra.com`
 - Password: `AdminPass123`
 - Access: Product management, user management, delivery management
 
 ### Delivery Boy Account
-- Email: `delivery@kshirmitra.com`
+- Email: `delivery@shirmitra.com`
 - Password: `DeliveryPass123`
 - Access: View and update assigned deliveries
 

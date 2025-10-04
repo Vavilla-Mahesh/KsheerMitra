@@ -16,13 +16,13 @@ This document describes the enhancements made to the KsheerMitra milk delivery m
 **How It Works:**
 - Admin and delivery boy credentials are defined in environment variables:
   ```
-  ADMIN_EMAIL=admin@kshirmitra.com
+  ADMIN_EMAIL=admin@shirmitra.com
   ADMIN_PASSWORD=AdminPass123
   ADMIN_NAME=Admin
   ADMIN_PHONE=0000000000
   ADMIN_LOCATION=HQ
   
-  DELIVERY_EMAIL=delivery@kshirmitra.com
+  DELIVERY_EMAIL=delivery@shirmitra.com
   DELIVERY_PASSWORD=DeliveryPass123
   DELIVERY_NAME=DeliveryBoy
   DELIVERY_PHONE=1111111111
@@ -228,14 +228,14 @@ BCRYPT_ROUNDS=12
 CORS_ORIGIN=http://localhost:3000
 
 # Admin Credentials
-ADMIN_EMAIL=admin@kshirmitra.com
+ADMIN_EMAIL=admin@shirmitra.com
 ADMIN_PASSWORD=AdminPass123
 ADMIN_NAME=Admin
 ADMIN_PHONE=0000000000
 ADMIN_LOCATION=HQ
 
 # Delivery Boy Credentials
-DELIVERY_EMAIL=delivery@kshirmitra.com
+DELIVERY_EMAIL=delivery@shirmitra.com
 DELIVERY_PASSWORD=DeliveryPass123
 DELIVERY_NAME=DeliveryBoy
 DELIVERY_PHONE=1111111111

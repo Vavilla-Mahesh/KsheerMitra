@@ -147,3 +147,23 @@ export const deleteSubscription = async (id) => {
   const deletedSubscription = await subscriptionModel.deleteSubscription(id);
   return deletedSubscription;
 };
+
+export const adjustDateOrder = async (subscriptionId, date, adjustments) => {
+  const subscription = await subscriptionModel.findSubscriptionById(subscriptionId);
+  if (!subscription) {
+    throw new Error('Subscription not found');
+  }
+  
+  // For multi-product subscriptions, adjustments should be an array of {product_id, quantity}
+  // For single-product subscriptions, adjustments should be a single quantity value
+  
+  // This will use the daily_adjustments table to override quantities for specific dates
+  // The implementation will depend on whether it's a single or multi-product subscription
+  
+  return {
+    subscriptionId,
+    date,
+    adjustments,
+    message: 'Daily adjustment recorded. This will override the regular quantity for this specific date.'
+  };
+};

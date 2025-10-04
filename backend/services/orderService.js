@@ -31,3 +31,18 @@ export const getOrderById = async (id) => {
   }
   return order;
 };
+
+export const updateOrderStatus = async (id, status) => {
+  const order = await orderModel.findOrderById(id);
+  if (!order) {
+    throw new Error('Order not found');
+  }
+  
+  const validStatuses = ['pending', 'delivered', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  }
+  
+  const updatedOrder = await orderModel.updateOrderStatus(id, status);
+  return updatedOrder;
+};

@@ -66,6 +66,10 @@ export const orderSchema = Joi.object({
   order_date: Joi.date().iso().required()
 });
 
+export const orderStatusSchema = Joi.object({
+  status: Joi.string().valid('pending', 'delivered', 'cancelled').required()
+});
+
 export const deliveryStatusSchema = Joi.object({
   status: Joi.string().valid('pending', 'assigned', 'in_progress', 'delivered', 'failed').required(),
   notes: Joi.string().max(1000).allow('')
@@ -149,5 +153,30 @@ export const validate = (schema) => {
     
     req.validatedData = value;
     next();
+  };
+};
+
+// Flexible validation that tries multiple schemas
+export const validateOneOf = (...schemas) => {
+  return (req, res, next) => {
+    let lastError = null;
+    
+    for (const schema of schemas) {
+      const { error, value } = schema.validate(req.body, { abortEarly: false });
+      
+      if (!error) {
+        req.validatedData = value;
+        return next();
+      }
+      
+      lastError = error;
+    }
+    
+    const errors = lastError.details.map(detail => detail.message);
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Validation error', 
+      errors 
+    });
   };
 };

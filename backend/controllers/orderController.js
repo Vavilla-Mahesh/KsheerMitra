@@ -54,3 +54,22 @@ export const getOrderById = async (req, res) => {
     });
   }
 };
+
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await orderService.updateOrderStatus(req.params.id, status);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: order
+    });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

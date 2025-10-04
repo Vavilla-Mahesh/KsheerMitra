@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
+import 'products_screen.dart';
 import 'subscriptions_screen.dart';
 import 'orders_screen.dart';
 import 'billing_screen.dart';
@@ -16,6 +17,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
+    ProductsScreen(),
     SubscriptionsScreen(),
     OrdersScreen(),
     BillingScreen(),
@@ -73,6 +75,10 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           });
         },
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.inventory),
+            label: 'Products',
+          ),
           NavigationDestination(
             icon: Icon(Icons.subscriptions),
             label: 'Subscriptions',

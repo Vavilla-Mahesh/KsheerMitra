@@ -82,11 +82,35 @@ class SubscriptionsScreen extends ConsumerWidget {
                           ),
                       ],
                     ),
-                    trailing: Chip(
-                      label: Text(subscription.isActive ? 'Active' : 'Inactive'),
-                      backgroundColor: subscription.isActive
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.2),
+                      trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Chip(
+                          label: Text(subscription.isActive ? 'Active' : 'Inactive'),
+                          backgroundColor: subscription.isActive
+                              ? Colors.green.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.2),
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _showEditDialog(context, ref, subscription);
+                            } else if (value == 'delete') {
+                              _showDeleteConfirmation(context, ref, subscription);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Text('Edit'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Cancel Subscription'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -111,14 +135,203 @@ class SubscriptionsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Create subscription feature - to be implemented')),
-          );
-        },
-        child: const Icon(Icons.add),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, WidgetRef ref, Subscription subscription) {
+    final quantityController = TextEditingController(
+      text: subscription.quantityPerDay.toString(),
+    );
+    bool isActive = subscription.isActive;
+    DateTime? endDate = subscription.endDate;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Edit ${subscription.productName}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Daily Quantity',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Active'),
+                  value: isActive,
+                  onChanged: (value) {
+                    setState(() {
+                      isActive = value;
+                    });
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('End Date (Optional)'),
+                  subtitle: Text(
+                    endDate == null
+                        ? 'No end date'
+                        : DateFormat('MMM dd, yyyy').format(endDate),
+                  ),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: endDate ?? DateTime.now().add(const Duration(days: 30)),
+                      firstDate: subscription.startDate,
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    setState(() {
+                      endDate = date;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final quantity = int.tryParse(quantityController.text);
+                if (quantity == null || quantity <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid quantity')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _updateSubscription(
+                  context,
+                  ref,
+                  subscription.id,
+                  quantity,
+                  isActive,
+                  endDate,
+                );
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _updateSubscription(
+    BuildContext context,
+    WidgetRef ref,
+    String subscriptionId,
+    int quantity,
+    bool isActive,
+    DateTime? endDate,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.put(
+        '${ApiConfig.subscriptions}/$subscriptionId',
+        data: {
+          'quantity_per_day': quantity,
+          'is_active': isActive,
+          'end_date': endDate?.toIso8601String(),
+        },
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(subscriptionsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Subscription updated successfully!')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating subscription: $e')),
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, Subscription subscription) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel Subscription'),
+        content: Text('Are you sure you want to cancel subscription for ${subscription.productName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _deleteSubscription(context, ref, subscription.id);
+            },
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteSubscription(
+    BuildContext context,
+    WidgetRef ref,
+    String subscriptionId,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.delete(
+        '${ApiConfig.subscriptions}/$subscriptionId',
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(subscriptionsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Subscription cancelled successfully!')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error cancelling subscription: $e')),
+        );
+      }
+    }
   }
 }

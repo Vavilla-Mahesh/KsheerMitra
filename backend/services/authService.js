@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { createUser, findUserByEmail, countDeliveryBoys } from '../models/userModel.js';
+import { createUser, findUserByEmail } from '../models/userModel.js';
 import { saveRefreshToken, findRefreshToken, revokeRefreshToken } from '../models/refreshTokenModel.js';
 
 dotenv.config();
@@ -11,18 +11,15 @@ const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS) || 12;
 export const signup = async (userData) => {
   const { name, phone, email, location, password, role = 'customer' } = userData;
   
+  // Only customers can sign up manually
+  if (role !== 'customer') {
+    throw new Error('Only customers can sign up');
+  }
+  
   // Check if email already exists
   const existingUser = await findUserByEmail(email);
   if (existingUser) {
     throw new Error('Email already registered');
-  }
-  
-  // Check delivery_boy constraint
-  if (role === 'delivery_boy') {
-    const deliveryBoyCount = await countDeliveryBoys();
-    if (deliveryBoyCount >= 1) {
-      throw new Error('Only one delivery boy is allowed');
-    }
   }
   
   // Hash password

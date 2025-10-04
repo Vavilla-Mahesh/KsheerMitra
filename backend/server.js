@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
+import { initializeSystemUsers } from './utils/initializeUsers.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
@@ -104,6 +105,9 @@ const startServer = async () => {
   try {
     // Connect to database
     await connectDB();
+    
+    // Initialize system users (admin and delivery boy)
+    await initializeSystemUsers();
     
     // Start listening
     app.listen(PORT, () => {

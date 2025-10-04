@@ -2,24 +2,31 @@ import { getClient } from '../config/db.js';
 
 export const createSubscription = async (subscriptionData) => {
   const client = getClient();
-  const { customer_id, product_id, quantity_per_day, start_date, end_date } = subscriptionData;
+  const { customer_id, product_id, quantity_per_day, start_date, end_date, schedule_type, days_of_week } = subscriptionData;
   
   const query = `
-    INSERT INTO subscriptions (customer_id, product_id, quantity_per_day, start_date, end_date)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO subscriptions (customer_id, product_id, quantity_per_day, start_date, end_date, schedule_type, days_of_week)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *
   `;
   
-  const result = await client.query(query, [customer_id, product_id, quantity_per_day, start_date, end_date]);
+  const result = await client.query(query, [
+    customer_id, 
+    product_id || null, 
+    quantity_per_day || 0, 
+    start_date, 
+    end_date, 
+    schedule_type || 'daily',
+    days_of_week || null
+  ]);
   return result.rows[0];
 };
 
 export const findSubscriptionById = async (id) => {
   const client = getClient();
   const query = `
-    SELECT s.*, p.name as product_name, p.unit_price, u.name as customer_name
+    SELECT s.*, u.name as customer_name
     FROM subscriptions s
-    JOIN products p ON s.product_id = p.id
     JOIN users u ON s.customer_id = u.id
     WHERE s.id = $1
   `;
@@ -30,9 +37,8 @@ export const findSubscriptionById = async (id) => {
 export const findSubscriptionsByCustomer = async (customerId) => {
   const client = getClient();
   const query = `
-    SELECT s.*, p.name as product_name, p.unit_price
+    SELECT s.*
     FROM subscriptions s
-    JOIN products p ON s.product_id = p.id
     WHERE s.customer_id = $1
     ORDER BY s.created_at DESC
   `;
@@ -74,9 +80,8 @@ export const deleteSubscription = async (id) => {
 export const findActiveSubscriptionsForDate = async (customerId, date) => {
   const client = getClient();
   const query = `
-    SELECT s.*, p.name as product_name, p.unit_price
+    SELECT s.*
     FROM subscriptions s
-    JOIN products p ON s.product_id = p.id
     WHERE s.customer_id = $1 
       AND s.is_active = true
       AND s.start_date <= $2

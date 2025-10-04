@@ -71,6 +71,69 @@ export const deliveryStatusSchema = Joi.object({
   notes: Joi.string().max(1000).allow('')
 });
 
+// Admin schemas
+export const adminUpdateUserSchema = Joi.object({
+  name: Joi.string().min(2).max(255),
+  phone: Joi.string().pattern(/^[0-9]{10,20}$/),
+  location: Joi.string().min(5).max(500),
+  status: Joi.string().valid('active', 'inactive')
+}).min(1);
+
+export const adminUpdateDeliveryBoySchema = Joi.object({
+  name: Joi.string().min(2).max(255),
+  phone: Joi.string().pattern(/^[0-9]{10,20}$/),
+  location: Joi.string().min(5).max(500),
+  status: Joi.string().valid('active', 'inactive')
+}).min(1);
+
+export const adminAssignDeliverySchema = Joi.object({
+  customer_id: Joi.string().uuid().required(),
+  delivery_date: Joi.date().iso().required()
+});
+
+// Enhanced product schema with image and category
+export const productSchemaWithImage = Joi.object({
+  name: Joi.string().min(2).max(255).required(),
+  description: Joi.string().max(1000).allow(''),
+  unit_price: Joi.number().min(0).required(),
+  unit: Joi.string().min(1).max(50).required(),
+  category: Joi.string().max(100).allow(''),
+  is_active: Joi.boolean().default(true)
+});
+
+export const updateProductSchemaWithImage = Joi.object({
+  name: Joi.string().min(2).max(255),
+  description: Joi.string().max(1000).allow(''),
+  unit_price: Joi.number().min(0),
+  unit: Joi.string().min(1).max(50),
+  category: Joi.string().max(100).allow(''),
+  is_active: Joi.boolean()
+}).min(1);
+
+// Enhanced subscription schema with scheduling
+export const enhancedSubscriptionSchema = Joi.object({
+  customer_id: Joi.string().uuid().required(),
+  start_date: Joi.date().iso().required(),
+  end_date: Joi.date().iso().min(Joi.ref('start_date')).allow(null),
+  schedule_type: Joi.string().valid('daily', 'weekly', 'custom').default('daily'),
+  days_of_week: Joi.string().allow(null, ''),
+  items: Joi.array().items(Joi.object({
+    product_id: Joi.string().uuid().required(),
+    quantity: Joi.number().integer().min(1).required()
+  })).min(1).required()
+});
+
+export const updateEnhancedSubscriptionSchema = Joi.object({
+  end_date: Joi.date().iso().allow(null),
+  schedule_type: Joi.string().valid('daily', 'weekly', 'custom'),
+  days_of_week: Joi.string().allow(null, ''),
+  is_active: Joi.boolean(),
+  items: Joi.array().items(Joi.object({
+    product_id: Joi.string().uuid().required(),
+    quantity: Joi.number().integer().min(1).required()
+  })).min(1)
+}).min(1);
+
 export const validate = (schema) => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false });

@@ -5,9 +5,9 @@ export const createProduct = async (productData) => {
   return product;
 };
 
-export const getAllProducts = async (activeOnly = false) => {
-  const products = await productModel.findAllProducts(activeOnly);
-  return products;
+export const getAllProducts = async (options) => {
+  const result = await productModel.findAllProducts(options);
+  return result;
 };
 
 export const getProductById = async (id) => {

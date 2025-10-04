@@ -40,6 +40,15 @@ class ApiConfig {
   static String customerBilling(String customerId) =>
       '/customers/$customerId/billing';
 
+  // Admin endpoints
+  static const String adminUsers = '/admin/users';
+  static String adminUser(String userId) => '/admin/users/$userId';
+  static String adminDeactivateUser(String userId) =>
+      '/admin/users/$userId/deactivate';
+  static const String adminDeliveryBoy = '/admin/delivery-boy';
+  static const String adminAssignDelivery = '/admin/assign-delivery';
+  static const String adminDashboard = '/admin/dashboard';
+
   // Health check
   static const String health = '/health';
   static const String meta = '/meta';

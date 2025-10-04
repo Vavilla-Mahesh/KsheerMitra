@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/order_model.dart';
+import '../../models/product_model.dart';
 import '../../config/api_config.dart';
 import '../../providers/api_provider.dart';
 import 'package:intl/intl.dart';
@@ -106,13 +107,12 @@ class OrdersScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Place order feature - to be implemented')),
-          );
+          _showPlaceOrderDialog(context, ref);
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Place Order'),
       ),
     );
   }
@@ -137,5 +137,209 @@ class OrdersScreen extends ConsumerWidget {
       ),
       backgroundColor: color.withOpacity(0.2),
     );
+  }
+
+  void _showPlaceOrderDialog(BuildContext context, WidgetRef ref) async {
+    final apiService = ref.read(apiServiceProvider);
+    
+    // Fetch products
+    List<Product> products = [];
+    try {
+      final response = await apiService.get(ApiConfig.products);
+      if (response.data['success']) {
+        products = (response.data['data'] as List)
+            .map((json) => Product.fromJson(json))
+            .where((p) => p.isActive)
+            .toList();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading products: $e')),
+        );
+      }
+      return;
+    }
+
+    if (products.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No products available')),
+        );
+      }
+      return;
+    }
+
+    Product? selectedProduct = products.first;
+    final quantityController = TextEditingController(text: '1');
+    DateTime orderDate = DateTime.now();
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Place One-Time Order'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<Product>(
+                  value: selectedProduct,
+                  decoration: const InputDecoration(
+                    labelText: 'Select Product',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: products.map((product) {
+                    return DropdownMenuItem(
+                      value: product,
+                      child: Text(product.name),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedProduct = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                if (selectedProduct != null) ...[
+                  Text('Price: ₹${selectedProduct.unitPrice.toStringAsFixed(2)}/${selectedProduct.unit}'),
+                  const SizedBox(height: 16),
+                ],
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Quantity${selectedProduct != null ? ' (${selectedProduct.unit})' : ''}',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Delivery Date'),
+                  subtitle: Text(DateFormat('MMM dd, yyyy').format(orderDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: orderDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 30)),
+                    );
+                    if (date != null) {
+                      setState(() {
+                        orderDate = date;
+                      });
+                    }
+                  },
+                ),
+                if (selectedProduct != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Total: ₹${(double.parse(quantityController.text.isEmpty ? '1' : quantityController.text) * selectedProduct.unitPrice).toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Payment: Cash on Delivery',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (selectedProduct == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a product')),
+                  );
+                  return;
+                }
+
+                final quantity = int.tryParse(quantityController.text);
+                if (quantity == null || quantity <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid quantity')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _placeOrder(
+                  context,
+                  ref,
+                  selectedProduct.id,
+                  quantity,
+                  orderDate,
+                );
+              },
+              child: const Text('Place Order'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _placeOrder(
+    BuildContext context,
+    WidgetRef ref,
+    String productId,
+    int quantity,
+    DateTime orderDate,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+    final user = ref.read(authProvider).user;
+
+    if (user == null) return;
+
+    try {
+      final response = await apiService.post(
+        ApiConfig.orders,
+        data: {
+          'customer_id': user.id,
+          'product_id': productId,
+          'quantity': quantity,
+          'order_date': orderDate.toIso8601String().split('T')[0],
+        },
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(ordersProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Order placed successfully! Payment on delivery.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error placing order: $e')),
+        );
+      }
+    }
   }
 }

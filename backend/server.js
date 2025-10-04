@@ -15,6 +15,12 @@ import dailyAdjustmentRoutes from './routes/dailyAdjustmentRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -34,6 +40,9 @@ app.use(morgan('combined'));
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -70,6 +79,7 @@ app.use('/customers/:customerId/orders', (req, res, next) => {
 });
 app.use('/delivery', deliveryRoutes);
 app.use('/customers', billingRoutes);
+app.use('/admin', adminRoutes);
 
 // Customer-specific subscription endpoint
 app.get('/customers/:customerId/subscriptions', async (req, res, next) => {

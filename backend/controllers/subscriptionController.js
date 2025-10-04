@@ -86,3 +86,45 @@ export const deleteSubscription = async (req, res) => {
     });
   }
 };
+
+export const adjustDateOrder = async (req, res) => {
+  try {
+    const { date, adjustments } = req.body;
+    const subscriptionId = req.params.id;
+    
+    const result = await subscriptionService.adjustDateOrder(subscriptionId, date, adjustments);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Date order adjusted successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Adjust date order error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const updateAllSchedule = async (req, res) => {
+  try {
+    const subscriptionId = req.params.id;
+    const updates = req.validatedData || req.body;
+    
+    const subscription = await subscriptionService.updateSubscription(subscriptionId, updates);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Subscription schedule updated successfully',
+      data: subscription
+    });
+  } catch (error) {
+    console.error('Update all schedule error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

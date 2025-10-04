@@ -33,20 +33,53 @@ KsheerMitra is a comprehensive milk delivery management system designed to handl
 - Server-side token revocation on logout
 - Role-based access control (admin, customer, delivery_boy)
 
+### 🆕 Enhanced Features (v2.0)
+
+#### Multi-Product Subscriptions
+- Subscribe to multiple products in a single subscription
+- Flexible scheduling: daily, weekly, or custom schedules
+- Specify delivery days (Mon, Wed, Fri, etc.)
+- Backward compatible with single-product subscriptions
+
+#### Product Management with Images
+- Secure image upload with multer (max 5MB)
+- MIME type validation (JPEG, PNG, GIF, WebP)
+- Product categories and filtering
+- Paginated product listing (Amazon-style)
+
+#### Admin Module
+- User management (view, update, deactivate)
+- Delivery boy management and status tracking
+- Delivery assignment
+- Dashboard with system statistics
+
+#### Enhanced Order Management
+- One-time orders (e-commerce style)
+- Order status tracking
+- Offline payment via delivery boy
+
 ### User Roles
 
 #### Customer
-- Manage recurring subscriptions
-- Add daily adjustments to subscription quantities
-- Place one-off extra orders
+- Browse products with pagination and category filters
+- Create multi-product subscriptions with flexible schedules
+- Edit specific date quantities or entire subscription
+- Place one-off orders
 - View monthly billing with daily breakdown
-- Track order history
+- Track order and delivery history
 
 #### Admin
-- Product CRUD operations
-- User management
-- Delivery tracking and assignment
+- Complete product CRUD with image upload
+- User management (view, update, deactivate)
+- Delivery boy management and status monitoring
+- Delivery assignment to customers
+- Dashboard with statistics (active customers, products, deliveries)
 - System-wide analytics
+
+#### Delivery Boy
+- View assigned deliveries
+- Update delivery and order status
+- Track current status (available, busy, offline)
 
 #### Delivery Boy
 - View assigned deliveries
@@ -117,9 +150,17 @@ KsheerMitra/
 
 3. **Database Setup**
    ```bash
-   createdb ksheer_mitra
-   psql -d ksheer_mitra -f migrations/001_initial_schema.sql
+   createdb ksheermitra
+   # Run all migrations using the script
+   chmod +x scripts/run-migrations.sh
+   ./scripts/run-migrations.sh
+   
+   # Or manually:
+   psql -d ksheermitra -f migrations/001_initial_schema.sql
+   psql -d ksheermitra -f migrations/002_enhanced_features.sql
    ```
+   
+   See [Migration Guide](backend/MIGRATION_GUIDE.md) for detailed instructions.
 
 4. **Start Server**
    ```bash
@@ -156,11 +197,13 @@ KsheerMitra/
 ### Core Tables
 
 - **users**: User accounts with roles
-- **products**: Product catalog
-- **subscriptions**: Recurring daily deliveries
+- **products**: Product catalog with images and categories
+- **subscriptions**: Recurring deliveries with flexible schedules
+- **subscription_items**: 🆕 Multi-product subscription support
 - **daily_adjustments**: Date-specific quantity changes
-- **orders**: One-off extra orders
+- **orders**: One-off orders
 - **deliveries**: Delivery tracking
+- **delivery_status**: 🆕 Delivery boy status tracking
 - **refresh_tokens**: JWT token management
 
 ### Key Constraints
@@ -172,18 +215,42 @@ KsheerMitra/
 
 ## API Documentation
 
-See `backend/README.md` for complete API documentation.
+### Core Documentation
+- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+- [Admin API Documentation](ADMIN_API_DOCUMENTATION.md) - Admin endpoints
+- [Enhanced Features Documentation](ENHANCED_FEATURES_DOCUMENTATION.md) - New features guide
+- [Implementation Summary](IMPLEMENTATION_SUMMARY.md) - Feature overview
+- [Migration Guide](backend/MIGRATION_GUIDE.md) - Database setup
 
 ### Key Endpoints
 
+#### Authentication
 - `POST /auth/signup` - Register new user
 - `POST /auth/login` - Login
 - `POST /auth/refresh` - Refresh access token
 - `POST /auth/logout` - Logout
-- `GET /products` - List products
-- `POST /subscriptions` - Create subscription
-- `GET /customers/:id/billing?month=YYYY-MM` - Monthly billing
-- `GET /delivery/assigned` - Assigned deliveries
+
+#### Products (with pagination)
+- `GET /products?page=1&limit=20&category=dairy` - List products
+- `POST /products` - Create product with image (admin)
+- `PUT /products/:id` - Update product with image (admin)
+
+#### Subscriptions (enhanced)
+- `POST /subscriptions` - Create single or multi-product subscription
+- `PUT /subscriptions/:id/adjust-date` - 🆕 Adjust specific date
+- `PUT /subscriptions/:id/update-all` - 🆕 Update entire schedule
+
+#### Orders
+- `POST /orders` - Place one-time order
+- `PUT /orders/:id/status` - 🆕 Update order status
+
+#### Admin (new)
+- `GET /admin/users` - List all users
+- `PUT /admin/users/:id` - Update user
+- `PATCH /admin/users/:id/deactivate` - Deactivate user
+- `GET /admin/delivery-boy` - Get delivery boy status
+- `POST /admin/assign-delivery` - Assign delivery
+- `GET /admin/dashboard` - System statistics
 
 ## Environment Variables
 

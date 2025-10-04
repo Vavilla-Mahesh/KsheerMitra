@@ -2,7 +2,14 @@ import * as productService from '../services/productService.js';
 
 export const createProduct = async (req, res) => {
   try {
-    const product = await productService.createProduct(req.validatedData);
+    const productData = req.body;
+    
+    // Add image URL if file was uploaded
+    if (req.file) {
+      productData.image_url = `/uploads/products/${req.file.filename}`;
+    }
+    
+    const product = await productService.createProduct(productData);
     
     res.status(201).json({
       success: true,
@@ -21,7 +28,11 @@ export const createProduct = async (req, res) => {
 export const getAllProducts = async (req, res) => {
   try {
     const activeOnly = req.query.active === 'true';
-    const products = await productService.getAllProducts(activeOnly);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const category = req.query.category;
+    
+    const products = await productService.getAllProducts({ activeOnly, page, limit, category });
     
     res.status(200).json({
       success: true,
@@ -55,7 +66,14 @@ export const getProductById = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const product = await productService.updateProduct(req.params.id, req.validatedData);
+    const updates = req.body;
+    
+    // Add image URL if file was uploaded
+    if (req.file) {
+      updates.image_url = `/uploads/products/${req.file.filename}`;
+    }
+    
+    const product = await productService.updateProduct(req.params.id, updates);
     
     res.status(200).json({
       success: true,

@@ -54,11 +54,35 @@ class ProductsScreen extends ConsumerWidget {
                         Text('₹${product.unitPrice.toStringAsFixed(2)} per ${product.unit}'),
                       ],
                     ),
-                    trailing: Chip(
-                      label: Text(product.isActive ? 'Active' : 'Inactive'),
-                      backgroundColor: product.isActive
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.2),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Chip(
+                          label: Text(product.isActive ? 'Active' : 'Inactive'),
+                          backgroundColor: product.isActive
+                              ? Colors.green.withOpacity(0.2)
+                              : Colors.grey.withOpacity(0.2),
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _showEditProductDialog(context, ref, product);
+                            } else if (value == 'delete') {
+                              _showDeleteConfirmation(context, ref, product);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Text('Edit'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -85,12 +109,379 @@ class ProductsScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add product feature - to be implemented')),
-          );
+          _showAddProductDialog(context, ref);
         },
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  void _showAddProductDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final priceController = TextEditingController();
+    final unitController = TextEditingController(text: 'liter');
+    bool isActive = true;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Product'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Product Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    border: OutlineInputBorder(),
+                    prefixText: '₹ ',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: unitController,
+                  decoration: const InputDecoration(
+                    labelText: 'Unit (e.g., liter, kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Active'),
+                  value: isActive,
+                  onChanged: (value) {
+                    setState(() {
+                      isActive = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty || 
+                    priceController.text.isEmpty || 
+                    unitController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all required fields')),
+                  );
+                  return;
+                }
+
+                final price = double.tryParse(priceController.text);
+                if (price == null || price < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid price')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _addProduct(
+                  context,
+                  ref,
+                  nameController.text,
+                  descriptionController.text,
+                  price,
+                  unitController.text,
+                  isActive,
+                );
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addProduct(
+    BuildContext context,
+    WidgetRef ref,
+    String name,
+    String description,
+    double price,
+    String unit,
+    bool isActive,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.post(
+        ApiConfig.products,
+        data: {
+          'name': name,
+          'description': description,
+          'unit_price': price,
+          'unit': unit,
+          'is_active': isActive,
+        },
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(productsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product added successfully!')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding product: $e')),
+        );
+      }
+    }
+  }
+
+  void _showEditProductDialog(BuildContext context, WidgetRef ref, Product product) {
+    final nameController = TextEditingController(text: product.name);
+    final descriptionController = TextEditingController(text: product.description ?? '');
+    final priceController = TextEditingController(text: product.unitPrice.toString());
+    final unitController = TextEditingController(text: product.unit);
+    bool isActive = product.isActive;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit Product'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Product Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    border: OutlineInputBorder(),
+                    prefixText: '₹ ',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: unitController,
+                  decoration: const InputDecoration(
+                    labelText: 'Unit (e.g., liter, kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Active'),
+                  value: isActive,
+                  onChanged: (value) {
+                    setState(() {
+                      isActive = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty || 
+                    priceController.text.isEmpty || 
+                    unitController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all required fields')),
+                  );
+                  return;
+                }
+
+                final price = double.tryParse(priceController.text);
+                if (price == null || price < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid price')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _updateProduct(
+                  context,
+                  ref,
+                  product.id,
+                  nameController.text,
+                  descriptionController.text,
+                  price,
+                  unitController.text,
+                  isActive,
+                );
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateProduct(
+    BuildContext context,
+    WidgetRef ref,
+    String productId,
+    String name,
+    String description,
+    double price,
+    String unit,
+    bool isActive,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.put(
+        '${ApiConfig.products}/$productId',
+        data: {
+          'name': name,
+          'description': description,
+          'unit_price': price,
+          'unit': unit,
+          'is_active': isActive,
+        },
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(productsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product updated successfully!')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating product: $e')),
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, Product product) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Text('Are you sure you want to delete ${product.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _deleteProduct(context, ref, product.id);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteProduct(
+    BuildContext context,
+    WidgetRef ref,
+    String productId,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.delete(
+        '${ApiConfig.products}/$productId',
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(productsProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product deleted successfully!')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting product: $e')),
+        );
+      }
+    }
   }
 }

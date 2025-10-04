@@ -95,6 +95,8 @@ class SubscriptionsScreen extends ConsumerWidget {
                           onSelected: (value) {
                             if (value == 'edit') {
                               _showEditDialog(context, ref, subscription);
+                            } else if (value == 'adjust') {
+                              _showDateAdjustmentDialog(context, ref, subscription);
                             } else if (value == 'delete') {
                               _showDeleteConfirmation(context, ref, subscription);
                             }
@@ -103,6 +105,10 @@ class SubscriptionsScreen extends ConsumerWidget {
                             const PopupMenuItem(
                               value: 'edit',
                               child: Text('Edit'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'adjust',
+                              child: Text('Adjust Date Quantity'),
                             ),
                             const PopupMenuItem(
                               value: 'delete',
@@ -269,6 +275,133 @@ class SubscriptionsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating subscription: $e')),
+        );
+      }
+    }
+  }
+
+  void _showDateAdjustmentDialog(BuildContext context, WidgetRef ref, Subscription subscription) {
+    DateTime selectedDate = DateTime.now();
+    final quantityController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Adjust Date Quantity'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Adjust quantity for a specific date only.'),
+                Text('Normal daily quantity: ${subscription.quantityPerDay}'),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Select Date'),
+                  subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: subscription.startDate,
+                      lastDate: subscription.endDate ?? DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (date != null) {
+                      setState(() {
+                        selectedDate = date;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Adjusted Quantity (0 to skip this day)',
+                    border: const OutlineInputBorder(),
+                    helperText: 'Enter 0 to skip delivery for this date',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final quantity = int.tryParse(quantityController.text);
+                if (quantity == null || quantity < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid quantity (0 or more)')),
+                  );
+                  return;
+                }
+
+                Navigator.pop(dialogContext);
+                await _createDateAdjustment(
+                  context,
+                  ref,
+                  subscription.id,
+                  selectedDate,
+                  quantity,
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createDateAdjustment(
+    BuildContext context,
+    WidgetRef ref,
+    String subscriptionId,
+    DateTime date,
+    int quantity,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.post(
+        ApiConfig.subscriptionAdjustments(subscriptionId),
+        data: {
+          'adjustment_date': date.toIso8601String().split('T')[0],
+          'adjusted_quantity': quantity,
+        },
+      );
+
+      if (response.data['success']) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                quantity == 0
+                    ? 'Delivery skipped for ${DateFormat('MMM dd, yyyy').format(date)}'
+                    : 'Quantity adjusted to $quantity for ${DateFormat('MMM dd, yyyy').format(date)}',
+              ),
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating adjustment: $e')),
         );
       }
     }

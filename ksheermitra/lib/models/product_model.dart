@@ -5,6 +5,8 @@ class Product {
   final double unitPrice;
   final String unit;
   final bool isActive;
+  final String? imageUrl;
+  final String? category;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +17,8 @@ class Product {
     required this.unitPrice,
     required this.unit,
     required this.isActive,
+    this.imageUrl,
+    this.category,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -27,6 +31,8 @@ class Product {
       unitPrice: double.parse(json['unit_price'].toString()),
       unit: json['unit'],
       isActive: json['is_active'],
+      imageUrl: json['image_url'],
+      category: json['category'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -40,6 +46,8 @@ class Product {
       'unit_price': unitPrice,
       'unit': unit,
       'is_active': isActive,
+      'image_url': imageUrl,
+      'category': category,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

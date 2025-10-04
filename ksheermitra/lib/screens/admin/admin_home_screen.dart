@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import 'products_screen.dart';
+import 'users_management_screen.dart';
+import 'deliveries_management_screen.dart';
 
 class AdminHomeScreen extends ConsumerStatefulWidget {
   const AdminHomeScreen({super.key});
@@ -15,8 +17,8 @@ class _AdminHomeScreenState extends ConsumerState<AdminHomeScreen> {
 
   final List<Widget> _screens = const [
     ProductsScreen(),
-    Center(child: Text('Users Management')),
-    Center(child: Text('Deliveries Management')),
+    UsersManagementScreen(),
+    DeliveriesManagementScreen(),
   ];
 
   @override

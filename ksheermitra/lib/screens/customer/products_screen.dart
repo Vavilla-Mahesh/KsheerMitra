@@ -50,53 +50,91 @@ class ProductsScreen extends ConsumerWidget {
             onRefresh: () async {
               ref.invalidate(productsProvider);
             },
-            child: ListView.builder(
+            child: GridView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: products.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: products.where((p) => p.isActive).length,
               itemBuilder: (context, index) {
-                final product = products[index];
-                if (!product.isActive) return const SizedBox.shrink();
+                final activeProducts = products.where((p) => p.isActive).toList();
+                final product = activeProducts[index];
                 
                 return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () {
+                      _showProductDetails(context, ref, product);
+                    },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                product.name,
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                            ),
-                            Chip(
-                              label: Text(
-                                '₹${product.unitPrice.toStringAsFixed(2)}/${product.unit}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
+                        Expanded(
+                          flex: 3,
+                          child: product.imageUrl != null
+                              ? Image.network(
+                                  '${ApiConfig.baseUrl}${product.imageUrl}',
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        size: 48,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(
+                                    Icons.local_drink,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                         ),
-                        if (product.description != null && product.description!.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            product.description!,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              _showSubscribeDialog(context, ref, product);
-                            },
-                            icon: const Icon(Icons.add),
-                            label: const Text('Subscribe'),
+                        Expanded(
+                          flex: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  product.name,
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '₹${product.unitPrice.toStringAsFixed(2)}/${product.unit}',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                                const Spacer(),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      _showSubscribeDialog(context, ref, product);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                    ),
+                                    child: const Text('Subscribe'),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -123,6 +161,68 @@ class ProductsScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showProductDetails(BuildContext context, WidgetRef ref, Product product) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(product.name),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (product.imageUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    '${ApiConfig.baseUrl}${product.imageUrl}',
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 200,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.image_not_supported, size: 48),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Text(
+                'Price: ₹${product.unitPrice.toStringAsFixed(2)}/${product.unit}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (product.description != null && product.description!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(product.description!),
+              ],
+              if (product.category != null && product.category!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Chip(label: Text(product.category!)),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _showSubscribeDialog(context, ref, product);
+            },
+            child: const Text('Subscribe'),
+          ),
+        ],
       ),
     );
   }

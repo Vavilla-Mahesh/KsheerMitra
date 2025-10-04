@@ -45,13 +45,49 @@ class ProductsScreen extends ConsumerWidget {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
+                    leading: product.imageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              '${ApiConfig.baseUrl}${product.imageUrl}',
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 60,
+                                  height: 60,
+                                  color: Colors.grey[200],
+                                  child: const Icon(Icons.image_not_supported),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Icon(Icons.local_drink),
+                          ),
                     title: Text(product.name),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (product.description != null && product.description!.isNotEmpty)
-                          Text(product.description!),
+                          Text(
+                            product.description!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         Text('₹${product.unitPrice.toStringAsFixed(2)} per ${product.unit}'),
+                        if (product.category != null && product.category!.isNotEmpty)
+                          Chip(
+                            label: Text(product.category!),
+                            visualDensity: VisualDensity.compact,
+                          ),
                       ],
                     ),
                     trailing: Row(
@@ -121,6 +157,7 @@ class ProductsScreen extends ConsumerWidget {
     final descriptionController = TextEditingController();
     final priceController = TextEditingController();
     final unitController = TextEditingController(text: 'liter');
+    final categoryController = TextEditingController();
     bool isActive = true;
 
     showDialog(
@@ -147,6 +184,14 @@ class ProductsScreen extends ConsumerWidget {
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Category (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -210,6 +255,7 @@ class ProductsScreen extends ConsumerWidget {
                   ref,
                   nameController.text,
                   descriptionController.text,
+                  categoryController.text,
                   price,
                   unitController.text,
                   isActive,
@@ -228,6 +274,7 @@ class ProductsScreen extends ConsumerWidget {
     WidgetRef ref,
     String name,
     String description,
+    String category,
     double price,
     String unit,
     bool isActive,
@@ -240,6 +287,7 @@ class ProductsScreen extends ConsumerWidget {
         data: {
           'name': name,
           'description': description,
+          'category': category,
           'unit_price': price,
           'unit': unit,
           'is_active': isActive,
@@ -272,6 +320,7 @@ class ProductsScreen extends ConsumerWidget {
   void _showEditProductDialog(BuildContext context, WidgetRef ref, Product product) {
     final nameController = TextEditingController(text: product.name);
     final descriptionController = TextEditingController(text: product.description ?? '');
+    final categoryController = TextEditingController(text: product.category ?? '');
     final priceController = TextEditingController(text: product.unitPrice.toString());
     final unitController = TextEditingController(text: product.unit);
     bool isActive = product.isActive;
@@ -300,6 +349,14 @@ class ProductsScreen extends ConsumerWidget {
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Category (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -364,6 +421,7 @@ class ProductsScreen extends ConsumerWidget {
                   product.id,
                   nameController.text,
                   descriptionController.text,
+                  categoryController.text,
                   price,
                   unitController.text,
                   isActive,
@@ -383,6 +441,7 @@ class ProductsScreen extends ConsumerWidget {
     String productId,
     String name,
     String description,
+    String category,
     double price,
     String unit,
     bool isActive,
@@ -395,6 +454,7 @@ class ProductsScreen extends ConsumerWidget {
         data: {
           'name': name,
           'description': description,
+          'category': category,
           'unit_price': price,
           'unit': unit,
           'is_active': isActive,

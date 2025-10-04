@@ -97,7 +97,11 @@ class DeliveryHomeScreen extends ConsumerWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: CircleAvatar(
-                      child: Icon(_getStatusIcon(delivery.status)),
+                      backgroundColor: _getStatusColor(delivery.status),
+                      child: Icon(
+                        _getStatusIcon(delivery.status),
+                        color: Colors.white,
+                      ),
                     ),
                     title: Text(delivery.customerName ?? 'Customer'),
                     subtitle: Column(
@@ -107,9 +111,24 @@ class DeliveryHomeScreen extends ConsumerWidget {
                         Text(
                           'Date: ${DateFormat('MMM dd, yyyy').format(delivery.deliveryDate)}',
                         ),
+                        if (delivery.notes != null && delivery.notes!.isNotEmpty)
+                          Text('Notes: ${delivery.notes}'),
                       ],
                     ),
-                    trailing: _buildStatusChip(delivery.status),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildStatusChip(delivery.status),
+                        const SizedBox(width: 8),
+                        if (delivery.status != 'delivered' && delivery.status != 'cancelled')
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            onPressed: () {
+                              _showUpdateStatusDialog(context, ref, delivery);
+                            },
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -142,6 +161,8 @@ class DeliveryHomeScreen extends ConsumerWidget {
         return Icons.check_circle;
       case 'in_progress':
         return Icons.local_shipping;
+      case 'cancelled':
+        return Icons.cancel;
       case 'failed':
         return Icons.error;
       default:
@@ -149,28 +170,140 @@ class DeliveryHomeScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildStatusChip(String status) {
-    Color color;
+  Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'delivered':
-        color = Colors.green;
-        break;
+        return Colors.green;
       case 'failed':
-        color = Colors.red;
-        break;
+      case 'cancelled':
+        return Colors.red;
       case 'in_progress':
-        color = Colors.blue;
-        break;
+        return Colors.blue;
       default:
-        color = Colors.orange;
+        return Colors.orange;
     }
+  }
 
+  Widget _buildStatusChip(String status) {
     return Chip(
       label: Text(
         status.toUpperCase(),
         style: const TextStyle(fontSize: 10),
       ),
-      backgroundColor: color.withOpacity(0.2),
+      backgroundColor: _getStatusColor(status).withOpacity(0.2),
     );
+  }
+
+  void _showUpdateStatusDialog(BuildContext context, WidgetRef ref, Delivery delivery) {
+    String selectedStatus = delivery.status;
+    final notesController = TextEditingController(text: delivery.notes ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Update Delivery Status'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Customer: ${delivery.customerName ?? 'Unknown'}'),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'pending', child: Text('Pending')),
+                    DropdownMenuItem(value: 'in_progress', child: Text('In Progress')),
+                    DropdownMenuItem(value: 'delivered', child: Text('Delivered')),
+                    DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        selectedStatus = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _updateDeliveryStatus(
+                  context,
+                  ref,
+                  delivery.id,
+                  selectedStatus,
+                  notesController.text,
+                );
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateDeliveryStatus(
+    BuildContext context,
+    WidgetRef ref,
+    String deliveryId,
+    String status,
+    String notes,
+  ) async {
+    final apiService = ref.read(apiServiceProvider);
+
+    try {
+      final response = await apiService.put(
+        ApiConfig.deliveryStatus(deliveryId),
+        data: {
+          'status': status,
+          'notes': notes.isEmpty ? null : notes,
+        },
+      );
+
+      if (response.data['success']) {
+        ref.invalidate(deliveriesProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Delivery status updated successfully!')),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.data['message']}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating delivery status: $e')),
+        );
+      }
+    }
   }
 }

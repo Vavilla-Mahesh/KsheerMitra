@@ -5,6 +5,7 @@ import '../../models/subscription_model.dart';
 import '../../config/api_config.dart';
 import '../../providers/api_provider.dart';
 import 'package:intl/intl.dart';
+import 'create_subscription_screen.dart';
 
 final subscriptionsProvider = FutureProvider.autoDispose<List<Subscription>>((ref) async {
   final apiService = ref.watch(apiServiceProvider);
@@ -32,6 +33,21 @@ class SubscriptionsScreen extends ConsumerWidget {
     final subscriptionsAsync = ref.watch(subscriptionsProvider);
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateSubscriptionScreen(),
+            ),
+          );
+          if (result == true) {
+            ref.invalidate(subscriptionsProvider);
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Create Subscription'),
+      ),
       body: subscriptionsAsync.when(
         data: (subscriptions) {
           if (subscriptions.isEmpty) {
@@ -62,62 +78,116 @@ class SubscriptionsScreen extends ConsumerWidget {
               itemCount: subscriptions.length,
               itemBuilder: (context, index) {
                 final subscription = subscriptions[index];
+                final isMultiProduct = subscription.isMultiProduct;
+                
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text('${subscription.quantityPerDay}'),
-                    ),
-                    title: Text(subscription.productName ?? 'Product'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${subscription.quantityPerDay} per day'),
-                        Text(
-                          'From ${DateFormat('MMM dd, yyyy').format(subscription.startDate)}',
-                        ),
-                        if (subscription.endDate != null)
-                          Text(
-                            'Until ${DateFormat('MMM dd, yyyy').format(subscription.endDate!)}',
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: CircleAvatar(
+                          child: Icon(
+                            isMultiProduct ? Icons.shopping_basket : Icons.local_drink,
                           ),
-                      ],
-                    ),
-                      trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Chip(
-                          label: Text(subscription.isActive ? 'Active' : 'Inactive'),
-                          backgroundColor: subscription.isActive
-                              ? Colors.green.withValues(alpha: 0.2)
-                              : Colors.grey.withValues(alpha: 0.2),
                         ),
-                        PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              _showEditDialog(context, ref, subscription);
-                            } else if (value == 'adjust') {
-                              _showDateAdjustmentDialog(context, ref, subscription);
-                            } else if (value == 'delete') {
-                              _showDeleteConfirmation(context, ref, subscription);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Text('Edit'),
+                        title: Text(
+                          isMultiProduct 
+                              ? 'Multi-Product Subscription' 
+                              : subscription.productName ?? 'Product',
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!isMultiProduct && subscription.quantityPerDay != null)
+                              Text('${subscription.quantityPerDay} per day'),
+                            if (isMultiProduct && subscription.items != null)
+                              Text('${subscription.items!.length} products'),
+                            Text(
+                              'From ${DateFormat('MMM dd, yyyy').format(subscription.startDate)}',
                             ),
-                            const PopupMenuItem(
-                              value: 'adjust',
-                              child: Text('Adjust Date Quantity'),
+                            if (subscription.endDate != null)
+                              Text(
+                                'Until ${DateFormat('MMM dd, yyyy').format(subscription.endDate!)}',
+                              ),
+                            if (subscription.scheduleType != null && subscription.scheduleType != 'daily')
+                              Text('Schedule: ${subscription.scheduleType}'),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Chip(
+                              label: Text(subscription.isActive ? 'Active' : 'Inactive'),
+                              backgroundColor: subscription.isActive
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.2),
                             ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Text('Cancel Subscription'),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value == 'view') {
+                                  _showSubscriptionDetails(context, subscription);
+                                } else if (value == 'edit' && !isMultiProduct) {
+                                  _showEditDialog(context, ref, subscription);
+                                } else if (value == 'adjust' && !isMultiProduct) {
+                                  _showDateAdjustmentDialog(context, ref, subscription);
+                                } else if (value == 'delete') {
+                                  _showDeleteConfirmation(context, ref, subscription);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                if (isMultiProduct)
+                                  const PopupMenuItem(
+                                    value: 'view',
+                                    child: Text('View Details'),
+                                  ),
+                                if (!isMultiProduct) ...[
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Edit'),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'adjust',
+                                    child: Text('Adjust Date Quantity'),
+                                  ),
+                                ],
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Cancel Subscription'),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      if (isMultiProduct && subscription.items != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Column(
+                            children: subscription.items!.map((item) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '• ${item.productName ?? 'Product'} - ${item.quantity} ${item.unit ?? 'unit'}',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                    ),
+                                    Text(
+                                      '₹${item.pricePerUnit.toStringAsFixed(2)}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Colors.grey[600],
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -140,6 +210,64 @@ class SubscriptionsScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showSubscriptionDetails(BuildContext context, Subscription subscription) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Subscription Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Start Date: ${DateFormat('MMM dd, yyyy').format(subscription.startDate)}',
+              ),
+              if (subscription.endDate != null)
+                Text(
+                  'End Date: ${DateFormat('MMM dd, yyyy').format(subscription.endDate!)}',
+                ),
+              if (subscription.scheduleType != null)
+                Text('Schedule: ${subscription.scheduleType}'),
+              if (subscription.daysOfWeek != null && subscription.daysOfWeek!.isNotEmpty)
+                Text('Days: ${subscription.daysOfWeek!.join(', ')}'),
+              const SizedBox(height: 16),
+              const Text(
+                'Products:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (subscription.items != null)
+                ...subscription.items!.map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text('${item.productName}'),
+                        ),
+                        Text(
+                          '${item.quantity} × ₹${item.pricePerUnit.toStringAsFixed(2)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }

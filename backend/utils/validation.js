@@ -42,10 +42,28 @@ export const updateProductSchema = Joi.object({
 
 export const subscriptionSchema = Joi.object({
   customer_id: Joi.string().uuid().required(),
-  product_id: Joi.string().uuid().required(),
-  quantity_per_day: Joi.number().integer().min(1).required(),
+  product_id: Joi.string().uuid(),
+  quantity_per_day: Joi.number().integer().min(1),
   start_date: Joi.date().iso().required(),
-  end_date: Joi.date().iso().min(Joi.ref('start_date')).allow(null)
+  end_date: Joi.date().iso().min(Joi.ref('start_date')).allow(null),
+  schedule_type: Joi.string().valid('daily', 'weekly', 'custom'),
+  days_of_week: Joi.string().allow(''),
+  items: Joi.array().items(
+    Joi.object({
+      product_id: Joi.string().uuid().required(),
+      quantity: Joi.number().integer().min(1).required()
+    })
+  )
+}).custom((value, helpers) => {
+  // Either product_id or items array must be provided
+  if (!value.product_id && (!value.items || value.items.length === 0)) {
+    return helpers.error('any.required', { message: 'Either product_id or items array is required' });
+  }
+  // If product_id is provided, quantity_per_day must be provided
+  if (value.product_id && !value.quantity_per_day) {
+    return helpers.error('any.required', { message: 'quantity_per_day is required when product_id is provided' });
+  }
+  return value;
 });
 
 export const updateSubscriptionSchema = Joi.object({

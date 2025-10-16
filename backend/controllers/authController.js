@@ -73,3 +73,74 @@ export const logout = async (req, res) => {
     });
   }
 };
+
+// WhatsApp OTP endpoints
+export const sendOtp = async (req, res) => {
+  try {
+    const { whatsapp_number } = req.validatedData;
+    const result = await authService.sendWhatsAppOtp(whatsapp_number);
+    
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { whatsapp_number, otp_code } = req.validatedData;
+    const result = await authService.verifyWhatsAppOtp(whatsapp_number, otp_code);
+    
+    // If user exists, log them in
+    if (result.userExists && result.user) {
+      const loginResult = await authService.loginWithWhatsApp(whatsapp_number);
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        data: {
+          ...result,
+          ...loginResult
+        }
+      });
+    } else {
+      // New user, proceed to signup
+      res.status(200).json({
+        success: true,
+        message: 'OTP verified. Please complete signup.',
+        data: result
+      });
+    }
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+export const completeWhatsAppSignup = async (req, res) => {
+  try {
+    const result = await authService.completeWhatsAppSignup(req.validatedData);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Signup completed successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Complete signup error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

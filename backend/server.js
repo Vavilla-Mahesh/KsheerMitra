@@ -16,6 +16,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import deliveryAreaRoutes from './routes/deliveryAreaRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -78,6 +79,7 @@ app.use('/customers/:customerId/orders', (req, res, next) => {
   next();
 });
 app.use('/delivery', deliveryRoutes);
+app.use('/delivery-management', deliveryAreaRoutes);
 app.use('/customers', billingRoutes);
 app.use('/admin', adminRoutes);
 

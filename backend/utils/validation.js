@@ -198,3 +198,69 @@ export const validateOneOf = (...schemas) => {
     });
   };
 };
+
+// WhatsApp OTP schemas
+export const whatsappOtpRequestSchema = Joi.object({
+  whatsapp_number: Joi.string().pattern(/^\+?[0-9]{10,15}$/).required()
+    .messages({
+      'string.pattern.base': 'WhatsApp number must be valid with country code'
+    })
+});
+
+export const whatsappOtpVerifySchema = Joi.object({
+  whatsapp_number: Joi.string().pattern(/^\+?[0-9]{10,15}$/).required(),
+  otp_code: Joi.string().length(6).pattern(/^[0-9]+$/).required()
+    .messages({
+      'string.length': 'OTP must be 6 digits',
+      'string.pattern.base': 'OTP must contain only numbers'
+    })
+});
+
+export const whatsappSignupSchema = Joi.object({
+  name: Joi.string().min(2).max(255).required(),
+  whatsapp_number: Joi.string().pattern(/^\+?[0-9]{10,15}$/).required(),
+  phone: Joi.string().pattern(/^[0-9]{10,20}$/).optional(),
+  latitude: Joi.number().min(-90).max(90).required(),
+  longitude: Joi.number().min(-180).max(180).required(),
+  address_manual: Joi.string().max(500).optional().allow(''),
+  role: Joi.string().valid('customer').default('customer')
+});
+
+// Delivery Area schemas
+export const deliveryAreaSchema = Joi.object({
+  name: Joi.string().min(2).max(255).required(),
+  description: Joi.string().max(1000).allow(''),
+  delivery_boy_id: Joi.string().uuid().optional().allow(null),
+  polygon_coordinates: Joi.array().items(
+    Joi.object({
+      lat: Joi.number().min(-90).max(90).required(),
+      lng: Joi.number().min(-180).max(180).required()
+    })
+  ).min(3).required()
+    .messages({
+      'array.min': 'Polygon must have at least 3 coordinates'
+    })
+});
+
+export const assignCustomersSchema = Joi.object({
+  customer_ids: Joi.array().items(Joi.string().uuid()).min(1).required()
+});
+
+export const generateRouteSchema = Joi.object({
+  delivery_boy_id: Joi.string().uuid().required(),
+  route_date: Joi.date().iso().required(),
+  delivery_boy_location: Joi.object({
+    lat: Joi.number().min(-90).max(90).required(),
+    lng: Joi.number().min(-180).max(180).required()
+  }).required(),
+  area_id: Joi.string().uuid().optional()
+});
+
+export const updateRouteStatusSchema = Joi.object({
+  status: Joi.string().valid('pending', 'in_progress', 'completed').required()
+});
+
+export const updateDeliveryLogSchema = Joi.object({
+  status: Joi.string().valid('pending', 'completed', 'failed').required(),
+  notes: Joi.string().max(1000).allow('')
+});

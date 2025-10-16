@@ -2,6 +2,33 @@
 
 Production-ready Milk Delivery Management System with Flutter mobile app and Node.js backend.
 
+## 🆕 Latest Features (v3.0)
+
+### WhatsApp-Based Authentication
+- **WhatsApp OTP Login**: Secure authentication using WhatsApp Business Cloud API
+- **No Password Required**: Passwordless authentication for better UX
+- **Auto-Login**: Returning users authenticated via OTP
+- **New User Onboarding**: Seamless signup flow with location selection
+
+### Google Maps Integration
+- **Location Picker**: Interactive map for selecting delivery addresses
+- **Auto-Geocoding**: Convert addresses to coordinates automatically
+- **Route Visualization**: See delivery routes on map
+- **Distance Calculation**: Accurate distance and ETA using Google Directions API
+
+### Dynamic Delivery Area Assignment
+- **Area Management**: Admin can create and manage delivery zones
+- **Customer Assignment**: Assign customers to specific areas and delivery personnel
+- **Multiple Delivery Boys**: Support for multiple delivery personnel (removed single delivery boy constraint)
+- **Visual Map View**: See all customers on map for easy area planning
+
+### Route Optimization
+- **Automated Route Planning**: Generate optimized delivery routes using Google Directions API
+- **Turn-by-Turn Navigation**: Step-by-step route guidance
+- **Real-Time Updates**: Mark deliveries as completed in real-time
+- **Performance Metrics**: Track distance, time, and completion rates
+- **Delivery Logs**: Detailed logs for each delivery with timestamps
+
 ## Overview
 
 KsheerMitra is a comprehensive milk delivery management system designed to handle subscriptions, deliveries, orders, and billing for milk delivery businesses. The system supports multiple user roles (customers, admin, delivery personnel) with role-based access control.
@@ -15,18 +42,22 @@ KsheerMitra is a comprehensive milk delivery management system designed to handl
 - **Authentication**: JWT with access & refresh token rotation
 - **Security**: bcrypt (cost 12), helmet, CORS, rate limiting
 - **Validation**: Joi
+- **External APIs**: WhatsApp Business Cloud API, Google Maps Platform
 
 ### Frontend
 - **Framework**: Flutter (production-ready mobile app)
 - **State Management**: Riverpod
 - **HTTP Client**: Dio with interceptors
 - **Secure Storage**: flutter_secure_storage
+- **Maps**: Google Maps Flutter SDK
+- **Location Services**: Location & Geocoding packages
 - **Themes**: Material Design 3 with dark/light mode
 
 ## Features
 
 ### Authentication & Authorization
-- Email/password authentication (no OTP)
+- **WhatsApp OTP Authentication**: Passwordless login via WhatsApp
+- **Email/Password Authentication**: Traditional login method (legacy support)
 - Secure password hashing with bcrypt
 - JWT-based authentication with token rotation
 - Persistent login with auto-refresh
@@ -175,16 +206,26 @@ KsheerMitra/
 1. **Prerequisites**
    - Flutter SDK (3.0+)
    - Android Studio / Xcode
+   - Google Maps API Key
 
 2. **Installation**
    ```bash
-   cd flutter_app
+   cd ksheermitra
    flutter pub get
    ```
 
-3. **Configure API URL** (optional)
-   ```bash
-   flutter run --dart-define=API_BASE_URL=http://your-api-url.com
+3. **Configure Google Maps** 
+   
+   **Android**: Edit `android/app/src/main/AndroidManifest.xml`
+   ```xml
+   <meta-data
+       android:name="com.google.android.geo.API_KEY"
+       android:value="YOUR_GOOGLE_MAPS_API_KEY"/>
+   ```
+   
+   **iOS**: Edit `ios/Runner/AppDelegate.swift`
+   ```swift
+   GMSServices.provideAPIKey("YOUR_GOOGLE_MAPS_API_KEY")
    ```
 
 4. **Run App**
@@ -192,11 +233,17 @@ KsheerMitra/
    flutter run
    ```
 
+### Quick Start for New Features
+
+For WhatsApp Authentication and Delivery Management setup:
+- See [Quick Start Guide](QUICK_START_NEW_FEATURES.md) - 5-minute setup
+- See [Detailed Setup Guide](WHATSAPP_MAPS_SETUP.md) - Complete documentation
+
 ## Database Schema
 
 ### Core Tables
 
-- **users**: User accounts with roles
+- **users**: User accounts with roles, WhatsApp numbers, and locations
 - **products**: Product catalog with images and categories
 - **subscriptions**: Recurring deliveries with flexible schedules
 - **subscription_items**: 🆕 Multi-product subscription support
@@ -206,10 +253,18 @@ KsheerMitra/
 - **delivery_status**: 🆕 Delivery boy status tracking
 - **refresh_tokens**: JWT token management
 
+### 🆕 New Tables (v3.0)
+
+- **otp_verifications**: WhatsApp OTP codes and verification
+- **delivery_areas**: Admin-defined delivery zones with polygon coordinates
+- **delivery_routes**: Optimized routes with Google Maps data
+- **delivery_logs**: Individual delivery completion tracking
+
 ### Key Constraints
 
-- Unique email per user
-- Only one delivery_boy (partial unique index)
+- Unique email per user (nullable for WhatsApp-only users)
+- Unique WhatsApp number per user
+- Multiple delivery boys supported (removed single boy constraint)
 - Foreign key relationships
 - Automatic timestamp updates
 

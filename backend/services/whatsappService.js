@@ -166,9 +166,9 @@ export const sendDailyInvoiceToAdmin = async (adminPhone, pdfPath, deliveryBoyNa
     await whatsappClient.sendMessage(formattedPhone, message);
     
     // Send PDF as media
-    const media = await import('whatsapp-web.js').then(m => m.MessageMedia);
+    const { MessageMedia } = await import('whatsapp-web.js');
     const pdfData = fs.readFileSync(pdfPath, { encoding: 'base64' });
-    const pdfMedia = new media.MessageMedia('application/pdf', pdfData, `daily_invoice_${date}.pdf`);
+    const pdfMedia = new MessageMedia('application/pdf', pdfData, `daily_invoice_${date}.pdf`);
     
     await whatsappClient.sendMessage(formattedPhone, pdfMedia);
     
@@ -210,9 +210,9 @@ export const sendMonthlyInvoiceToCustomer = async (customerPhone, pdfPath, custo
     await whatsappClient.sendMessage(formattedPhone, message);
     
     // Send PDF as media
-    const media = await import('whatsapp-web.js').then(m => m.MessageMedia);
+    const { MessageMedia } = await import('whatsapp-web.js');
     const pdfData = fs.readFileSync(pdfPath, { encoding: 'base64' });
-    const pdfMedia = new media.MessageMedia('application/pdf', pdfData, `monthly_invoice_${month}_${year}.pdf`);
+    const pdfMedia = new MessageMedia('application/pdf', pdfData, `monthly_invoice_${month}_${year}.pdf`);
     
     await whatsappClient.sendMessage(formattedPhone, pdfMedia);
     

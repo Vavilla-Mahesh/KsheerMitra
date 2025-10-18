@@ -6,6 +6,14 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import { initializeSystemUsers } from './utils/initializeUsers.js';
 
+// Import Sequelize config and models
+import sequelize, { testConnection } from './config/sequelize.js';
+import './models/sequelize/index.js'; // Initialize models and associations
+
+// Import services
+import { getWhatsAppService } from './services/whatsappService.js';
+import { getCronService } from './services/cronService.js';
+
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -16,6 +24,12 @@ import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+
+// Import new routes for OTP and enhanced features
+import otpAuthRoutes from './routes/otpAuthRoutes.js';
+import newDeliveryRoutes from './routes/newDeliveryRoutes.js';
+import newAdminRoutes from './routes/newAdminRoutes.js';
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -66,7 +80,14 @@ app.get('/meta', (req, res) => {
   });
 });
 
-// API routes
+// API routes - OTP Authentication (new)
+app.use('/api/auth', otpAuthRoutes);
+
+// API routes - New enhanced delivery and admin routes
+app.use('/api/delivery', newDeliveryRoutes);
+app.use('/api/admin', newAdminRoutes);
+
+// Legacy API routes (backward compatible)
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
@@ -113,16 +134,47 @@ app.use((err, req, res, next) => {
 // Start server
 const startServer = async () => {
   try {
-    // Connect to database
+    // Connect to database (legacy pg client)
     await connectDB();
+    
+    // Test Sequelize connection
+    await testConnection();
+    
+    // Sync Sequelize models (in development, use migrations in production)
+    if (process.env.NODE_ENV === 'development') {
+      await sequelize.sync({ alter: false }); // Set to true to auto-update schema
+      console.log('Sequelize models synchronized');
+    }
     
     // Initialize system users (admin and delivery boy)
     await initializeSystemUsers();
+    
+    // Initialize WhatsApp service (optional - will show QR code if not authenticated)
+    if (process.env.ENABLE_WHATSAPP === 'true') {
+      try {
+        const whatsappService = getWhatsAppService();
+        await whatsappService.initialize();
+        console.log('WhatsApp service initialized');
+      } catch (error) {
+        console.warn('WhatsApp service failed to initialize:', error.message);
+        console.warn('Continuing without WhatsApp integration');
+      }
+    }
+    
+    // Initialize cron jobs
+    if (process.env.ENABLE_CRON === 'true') {
+      const cronService = getCronService();
+      cronService.initializeJobs();
+      console.log('Cron jobs initialized');
+    }
     
     // Start listening
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`WhatsApp: ${process.env.ENABLE_WHATSAPP === 'true' ? 'Enabled' : 'Disabled'}`);
+      console.log(`Cron Jobs: ${process.env.ENABLE_CRON === 'true' ? 'Enabled' : 'Disabled'}`);
+      console.log(`Google Maps: ${process.env.GOOGLE_MAPS_API_KEY ? 'Enabled' : 'Disabled'}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

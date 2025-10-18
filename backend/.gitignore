@@ -24,3 +24,12 @@ Thumbs.db
 uploads/**/*
 !uploads/.gitkeep
 !uploads/products/.gitkeep
+
+# WhatsApp sessions
+sessions/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Generated invoices
+invoices/*.pdf
+!invoices/.gitkeep

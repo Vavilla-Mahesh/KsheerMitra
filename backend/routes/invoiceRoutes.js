@@ -13,9 +13,9 @@ const invoiceLimiter = rateLimit({
 });
 
 // Generate monthly invoice for a customer
-router.post('/monthly/:customerId', authenticate, invoiceLimiter, generateMonthlyInvoice);
+router.post('/monthly/:customerId', invoiceLimiter, authenticate, generateMonthlyInvoice);
 
 // Get invoices for a customer
-router.get('/customer/:customerId', authenticate, invoiceLimiter, getCustomerInvoices);
+router.get('/customer/:customerId', invoiceLimiter, authenticate, getCustomerInvoices);
 
 export default router;

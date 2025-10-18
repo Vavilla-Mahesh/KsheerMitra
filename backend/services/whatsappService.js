@@ -128,9 +128,17 @@ class WhatsAppService {
         ? '📄 Your daily delivery invoice is ready!'
         : '🧾 Your monthly invoice is ready!';
 
+      // Validate pdfPath is within expected directory
+      const invoicesDir = path.resolve(__dirname, '../../invoices');
+      const resolvedPath = path.resolve(pdfPath);
+      
+      if (!resolvedPath.startsWith(invoicesDir)) {
+        throw new Error('Invalid PDF path');
+      }
+
       // Send invoice as document
       const media = await import('whatsapp-web.js').then(m => m.MessageMedia);
-      const pdfData = fs.readFileSync(pdfPath, { encoding: 'base64' });
+      const pdfData = fs.readFileSync(resolvedPath, { encoding: 'base64' });
       const pdfMedia = new media.MessageMedia('application/pdf', pdfData, `invoice_${invoiceType.toLowerCase()}.pdf`);
       
       await this.client.sendMessage(`${formattedPhone}@c.us`, pdfMedia, { caption });

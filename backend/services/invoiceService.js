@@ -30,8 +30,18 @@ class InvoiceService {
       totalAmount
     } = data;
 
-    const fileName = `daily_invoice_${deliveryBoyId}_${date}.pdf`;
+    // Sanitize filename to prevent path traversal
+    const sanitizedId = deliveryBoyId.replace(/[^a-zA-Z0-9-]/g, '');
+    const sanitizedDate = date.replace(/[^0-9-]/g, '');
+    const fileName = `daily_invoice_${sanitizedId}_${sanitizedDate}.pdf`;
     const filePath = path.join(this.invoicesDir, fileName);
+    
+    // Validate the final path is within invoices directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedInvoicesDir = path.resolve(this.invoicesDir);
+    if (!resolvedPath.startsWith(resolvedInvoicesDir)) {
+      return Promise.reject(new Error('Invalid file path'));
+    }
 
     return new Promise((resolve, reject) => {
       try {
@@ -136,8 +146,19 @@ class InvoiceService {
       paymentStatus
     } = data;
 
-    const fileName = `monthly_invoice_${customerId}_${year}_${month}.pdf`;
+    // Sanitize filename to prevent path traversal
+    const sanitizedId = customerId.replace(/[^a-zA-Z0-9-]/g, '');
+    const sanitizedYear = year.toString().replace(/[^0-9]/g, '');
+    const sanitizedMonth = month.toString().replace(/[^0-9]/g, '');
+    const fileName = `monthly_invoice_${sanitizedId}_${sanitizedYear}_${sanitizedMonth}.pdf`;
     const filePath = path.join(this.invoicesDir, fileName);
+    
+    // Validate the final path is within invoices directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedInvoicesDir = path.resolve(this.invoicesDir);
+    if (!resolvedPath.startsWith(resolvedInvoicesDir)) {
+      return Promise.reject(new Error('Invalid file path'));
+    }
 
     return new Promise((resolve, reject) => {
       try {

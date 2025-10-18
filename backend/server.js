@@ -5,6 +5,8 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import { initializeSystemUsers } from './utils/initializeUsers.js';
+import { initializeWhatsApp, isWhatsAppReady } from './services/whatsappService.js';
+import { initializeScheduler } from './services/schedulerService.js';
 
 // Import routes
 import authRoutes from './routes/authRoutes.js';
@@ -16,6 +18,8 @@ import orderRoutes from './routes/orderRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import invoiceRoutes from './routes/invoiceRoutes.js';
+import otpRoutes from './routes/otpRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -49,7 +53,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Server is healthy',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    whatsappReady: isWhatsAppReady()
   });
 });
 
@@ -80,6 +85,8 @@ app.use('/customers/:customerId/orders', (req, res, next) => {
 app.use('/delivery', deliveryRoutes);
 app.use('/customers', billingRoutes);
 app.use('/admin', adminRoutes);
+app.use('/invoices', invoiceRoutes);
+app.use('/otp', otpRoutes);
 
 // Customer-specific subscription endpoint
 app.get('/customers/:customerId/subscriptions', async (req, res, next) => {
@@ -119,10 +126,21 @@ const startServer = async () => {
     // Initialize system users (admin and delivery boy)
     await initializeSystemUsers();
     
+    // Initialize WhatsApp client (non-blocking)
+    initializeWhatsApp().catch(error => {
+      console.error('Failed to initialize WhatsApp client:', error);
+      console.warn('Server will continue without WhatsApp integration');
+    });
+    
+    // Initialize scheduler for automated jobs
+    initializeScheduler();
+    
     // Start listening
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log('WhatsApp integration: Initializing...');
+      console.log('Scheduler: Active');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

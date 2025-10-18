@@ -62,6 +62,14 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id; // From auth middleware
     const profileData = req.body;
 
+    // Accept latitude and longitude directly from request
+    if (req.body.latitude !== undefined) {
+      profileData.latitude = req.body.latitude;
+    }
+    if (req.body.longitude !== undefined) {
+      profileData.longitude = req.body.longitude;
+    }
+
     const result = await otpAuthService.updateProfile(userId, profileData);
 
     res.status(200).json(result);

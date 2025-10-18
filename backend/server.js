@@ -29,6 +29,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import otpAuthRoutes from './routes/otpAuthRoutes.js';
 import newDeliveryRoutes from './routes/newDeliveryRoutes.js';
 import newAdminRoutes from './routes/newAdminRoutes.js';
+import invoiceRoutes from './routes/invoiceRoutes.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -86,6 +87,7 @@ app.use('/api/auth', otpAuthRoutes);
 // API routes - New enhanced delivery and admin routes
 app.use('/api/delivery', newDeliveryRoutes);
 app.use('/api/admin', newAdminRoutes);
+app.use('/api/invoice', invoiceRoutes);
 
 // Legacy API routes (backward compatible)
 app.use('/auth', authRoutes);

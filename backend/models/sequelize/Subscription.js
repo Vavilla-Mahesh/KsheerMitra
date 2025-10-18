@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import sequelize from '../config/sequelize.js';
+import sequelize from '../../config/sequelize.js';
 
 const Subscription = sequelize.define('Subscription', {
   id: {

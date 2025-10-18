@@ -147,7 +147,7 @@ class OTPAuthService {
   /**
    * Update user profile after first login
    * @param {string} userId - User ID
-   * @param {Object} profileData - Profile data (name, address, email)
+   * @param {Object} profileData - Profile data (name, address, email, latitude, longitude)
    * @returns {Promise<Object>} - Updated user
    */
   async updateProfile(userId, profileData) {
@@ -163,9 +163,13 @@ class OTPAuthService {
       if (profileData.name) updates.name = profileData.name;
       if (profileData.address) updates.address = profileData.address;
       if (profileData.email) updates.email = profileData.email;
+      
+      // Accept latitude and longitude directly if provided
+      if (profileData.latitude !== undefined) updates.latitude = profileData.latitude;
+      if (profileData.longitude !== undefined) updates.longitude = profileData.longitude;
 
-      // If address is provided, geocode it
-      if (profileData.address && !profileData.latitude) {
+      // If address is provided but no lat/lng, try to geocode it
+      if (profileData.address && !profileData.latitude && !profileData.longitude) {
         try {
           const { getGoogleMapsService } = await import('./googleMapsService.js');
           const mapsService = getGoogleMapsService();

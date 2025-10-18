@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import sequelize from '../config/sequelize.js';
+import sequelize from '../../config/sequelize.js';
 
 const Invoice = sequelize.define('Invoice', {
   id: {

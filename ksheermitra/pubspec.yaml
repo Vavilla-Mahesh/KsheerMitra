@@ -30,6 +30,12 @@ dependencies:
   http: ^1.2.0
   mime: ^1.0.4
 
+  # Google Maps & Location
+  google_maps_flutter: ^2.2.7
+  geolocator: ^9.0.2
+  google_place: ^0.4.7
+  geocoding: ^2.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

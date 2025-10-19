@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme_config.dart';
 import 'signup_screen.dart';
+import 'otp_login_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -141,6 +142,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         );
                       },
                       child: const Text("Don't have an account? Sign up"),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const OtpLoginScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.phone),
+                      label: const Text('Login with OTP'),
                     ),
                   ],
                 ),

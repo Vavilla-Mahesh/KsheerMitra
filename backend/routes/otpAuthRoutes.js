@@ -19,11 +19,14 @@ const authLimiter = rateLimit({
 });
 
 // OTP Authentication routes
-router.post('/otp/request', otpLimiter, requestOTP);
-router.post('/otp/verify', authLimiter, verifyOTP);
+router.post('/send-otp', otpLimiter, requestOTP);
+router.post('/verify-otp', authLimiter, verifyOTP);
+router.post('/otp/request', otpLimiter, requestOTP); // Legacy
+router.post('/otp/verify', authLimiter, verifyOTP); // Legacy
 
-// Profile routes (protected)
+// Profile/Signup routes (protected)
 router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, updateProfile);
+router.post('/signup', authLimiter, updateProfile); // Alias for profile update after OTP login
 
 export default router;

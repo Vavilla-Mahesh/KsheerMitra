@@ -6,7 +6,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "validate:env": "node scripts/validate-env.js",
+    "check:system": "node scripts/system-check.js",
+    "prestart": "node scripts/validate-env.js"
   },
   "keywords": [
     "milk",
